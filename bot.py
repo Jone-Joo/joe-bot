@@ -1,6 +1,21 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
 import os
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
+
+# سيرفر صغير عشان Render ميوقفش البوت على الـ Free Tier
+class PingHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"Bot is running!")
+    def log_message(self, format, *args):
+        pass
+
+def run_ping_server():
+    port = int(os.getenv("PORT", 8080))
+    HTTPServer(("0.0.0.0", port), PingHandler).serve_forever()
 
 # ============================================================
 # الإعدادات الأساسية
@@ -334,6 +349,9 @@ async def end_quiz(query, score):
 # تشغيل البوت
 # ============================================================
 def main():
+    # شغّل السيرفر الصغير في الخلفية عشان Render يعرف البوت شغال
+    threading.Thread(target=run_ping_server, daemon=True).start()
+
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(button_handler))
